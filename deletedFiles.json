@@ -1,0 +1,146 @@
+[
+  {
+    "source": "server/api/@types/models.ts",
+    "content": "export type UserModel = {\n  id: string;\n  email: string;\n  name: string;\n  createdTime: number;\n};\n\nexport type TaskModel = {\n  id: string;\n  label: string;\n  done: boolean;\n  createdTime: number;\n  image: { url: string; s3Key: string } | undefined;\n  author: { userId: string; name: string };\n};\n"
+  },
+  {
+    "source": "server/api/controller.ts",
+    "content": "import { defineController } from './$relay';\n\nexport default defineController(() => ({\n  get: () => ({ status: 200, body: '' }),\n}));\n"
+  },
+  {
+    "source": "server/api/health/controller.ts",
+    "content": "import { prismaClient } from '$/service/prismaClient';\nimport { defineController } from './$relay';\n\nexport default defineController(() => ({\n  get: async () => ({\n    status: 200,\n    body: {\n      server: 'ok',\n      db: await prismaClient.$queryRaw`SELECT CURRENT_TIMESTAMP;`.then(() => 'ok' as const),\n    },\n  }),\n}));\n"
+  },
+  {
+    "source": "server/api/health/index.ts",
+    "content": "import type { DefineMethods } from 'aspida';\n\nexport type Methods = DefineMethods<{\n  get: {\n    resBody: Record<'server' | 'db', 'ok'>;\n  };\n}>;\n"
+  },
+  {
+    "source": "server/api/index.ts",
+    "content": "import type { DefineMethods } from 'aspida';\n\nexport type Methods = DefineMethods<{\n  get: {\n    resBody: string;\n  };\n}>;\n"
+  },
+  {
+    "source": "server/api/private/controller.ts",
+    "content": "import { defineController } from './$relay';\n\nexport default defineController(() => ({\n  get: () => ({ status: 200, body: 'Hello' }),\n}));\n"
+  },
+  {
+    "source": "server/api/private/hooks.ts",
+    "content": "import type { JwtUser } from '$/domain/model/userModel';\nimport { userRepo } from '$/domain/repository/userRepo';\nimport type { JWT_PROP_NAME } from '$/service/constants';\nimport { prismaClient } from '$/service/prismaClient';\nimport assert from 'assert';\nimport type { UserModel } from '../@types/models';\nimport { defineHooks } from './$relay';\n\nexport type AdditionalRequest = {\n  [Key in typeof JWT_PROP_NAME]: JwtUser;\n} & { user: UserModel };\n\nexport default defineHooks(() => ({\n  onRequest: async (req, res) => {\n    try {\n      await req.jwtVerify({ onlyCookie: true });\n    } catch (e) {\n      res.status(401).send();\n      return;\n    }\n  },\n  preHandler: async (req, res) => {\n    assert(req.jwtUser);\n\n    const user = await userRepo.findById(prismaClient, req.jwtUser.sub);\n\n    if (user === null) {\n      res.status(401).send();\n      return;\n    }\n\n    req.user = user;\n  },\n}));\n"
+  },
+  {
+    "source": "server/api/private/index.ts",
+    "content": "import type { DefineMethods } from 'aspida';\n\nexport type Methods = DefineMethods<{\n  get: {\n    resBody: string;\n  };\n}>;\n"
+  },
+  {
+    "source": "server/api/private/me/controller.ts",
+    "content": "import { userUseCase } from '$/domain/useCase/userUseCase';\nimport assert from 'assert';\nimport { defineController } from './$relay';\n\nexport default defineController(() => ({\n  post: {\n    hooks: {\n      preValidation: async (req) => {\n        assert(req.jwtUser);\n\n        await userUseCase.findOrCreate(req.jwtUser);\n      },\n    },\n    handler: ({ user }) => ({ status: 200, body: user }),\n  },\n}));\n"
+  },
+  {
+    "source": "server/api/private/me/index.ts",
+    "content": "import type { UserModel } from '$/api/@types/models';\nimport type { DefineMethods } from 'aspida';\n\nexport type Methods = DefineMethods<{\n  post: {\n    resBody: UserModel;\n  };\n}>;\n"
+  },
+  {
+    "source": "server/api/private/tasks/controller.ts",
+    "content": "import { taskUseCase } from '$/domain/useCase/taskUseCase';\nimport { z } from 'zod';\nimport { defineController, multipartFileValidator } from './$relay';\n\nexport default defineController(() => ({\n  post: {\n    validators: {\n      body: z.object({ label: z.string(), image: multipartFileValidator().optional() }),\n    },\n    handler: async ({ user, body }) => ({\n      status: 201,\n      body: await taskUseCase.create(user, body.label, body.image),\n    }),\n  },\n  patch: {\n    validators: {\n      body: z.object({\n        taskId: z.string(),\n        done: z.boolean(),\n        label: z.string(),\n      }),\n    },\n    handler: async ({ user, body }) => {\n      const task = await taskUseCase.update(user, body.taskId, body.done, body.label);\n\n      return { status: 204, body: task };\n    },\n  },\n  delete: async ({ user, body }) => {\n    await taskUseCase.delete(user, body.taskId);\n\n    return { status: 204 };\n  },\n}));\n"
+  },
+  {
+    "source": "server/api/private/tasks/index.ts",
+    "content": "import type { TaskModel } from '$/api/@types/models';\nimport type { DefineMethods } from 'aspida';\n\nexport type Methods = DefineMethods<{\n  post: {\n    reqFormat: FormData;\n    reqBody: {\n      label: string;\n      image?: Blob;\n    };\n    resBody: TaskModel;\n  };\n\n  patch: {\n    reqBody: {\n      taskId: string;\n      done: boolean;\n      label: string;\n    };\n    status: 204;\n    resBody: TaskModel;\n  };\n\n  delete: {\n    reqBody: {\n      taskId: string;\n    };\n    status: 204;\n  };\n}>;\n"
+  },
+  {
+    "source": "server/api/public/controller.ts",
+    "content": "import { defineController } from './$relay';\n\nexport default defineController(() => ({\n  get: () => ({ status: 200, body: 'Hello' }),\n}));\n"
+  },
+  {
+    "source": "server/api/public/index.ts",
+    "content": "import type { DefineMethods } from 'aspida';\n\nexport type Methods = DefineMethods<{\n  get: {\n    resBody: string;\n  };\n}>;\n"
+  },
+  {
+    "source": "server/api/public/tasks/controller.ts",
+    "content": "import { taskRepo } from '$/domain/repository/taskRepo';\nimport { prismaClient } from '$/service/prismaClient';\nimport { defineController } from './$relay';\n\nexport default defineController(() => ({\n  get: async ({ query }) => ({\n    status: 200,\n    body: await taskRepo.findAll(prismaClient, query?.limit),\n  }),\n}));\n"
+  },
+  {
+    "source": "server/api/public/tasks/index.ts",
+    "content": "import type { TaskModel } from '$/api/@types/models';\nimport type { DefineMethods } from 'aspida';\n\nexport type Methods = DefineMethods<{\n  get: {\n    query?: {\n      limit?: number;\n    };\n    resBody: TaskModel[];\n  };\n}>;\n"
+  },
+  {
+    "source": "server/api/session/controller.ts",
+    "content": "import { COOKIE_NAME } from '$/service/constants';\nimport type { CookieSerializeOptions } from '@fastify/cookie';\nimport type { Methods } from '.';\nimport { defineController } from './$relay';\n\nexport type AdditionalRequest = {\n  body: Methods['post']['reqBody'];\n};\n\nconst options: CookieSerializeOptions = {\n  httpOnly: true,\n  secure: true,\n  path: '/',\n  sameSite: 'none',\n};\n\nexport default defineController(() => ({\n  post: {\n    hooks: {\n      preHandler: (req, reply, done) => {\n        const expiresIn = 60 * 60 * 24 * 5 * 1000;\n\n        reply.setCookie(COOKIE_NAME, req.body?.jwt ?? '', {\n          ...options,\n          expires: new Date(Date.now() + expiresIn),\n        });\n\n        done();\n      },\n    },\n    handler: () => {\n      return { status: 200, body: { status: 'success' } };\n    },\n  },\n  delete: {\n    hooks: {\n      preHandler: (_, reply, done) => {\n        reply.clearCookie(COOKIE_NAME, options);\n        done();\n      },\n    },\n    handler: () => {\n      return { status: 200, body: { status: 'success' } };\n    },\n  },\n}));\n"
+  },
+  {
+    "source": "server/api/session/index.ts",
+    "content": "import type { DefineMethods } from 'aspida';\n\nexport type Methods = DefineMethods<{\n  post: {\n    reqBody: { jwt: string };\n    resBody: { status: 'success' };\n  };\n  delete: {\n    resBody: { status: 'success' };\n  };\n}>;\n"
+  },
+  {
+    "source": "client/src/atoms/user.ts",
+    "content": "import type { UserModel } from '$/api/@types/models';\nimport { atom } from 'jotai';\n\nexport const userAtom = atom<UserModel | null>(null);\n"
+  },
+  {
+    "source": "client/src/components/ElapsedTime/ElapsedTime.module.css",
+    "content": ".date {\n  font-size: 16px;\n  color: #777;\n}\n"
+  },
+  {
+    "source": "client/src/components/ElapsedTime/ElapsedTime.tsx",
+    "content": "import { useEffect, useState } from 'react';\nimport styles from './ElapsedTime.module.css';\n\nexport const ElapsedTime = (props: { createdTime: number }) => {\n  const [displayDate, setDisplayDate] = useState('');\n\n  useEffect(() => {\n    const now = Date.now();\n    const secondsPast = (now - props.createdTime) / 1000;\n\n    let result;\n    if (secondsPast < 60) {\n      result = `${Math.round(secondsPast)}s`;\n    } else if (secondsPast < 3600) {\n      result = `${Math.round(secondsPast / 60)}m`;\n    } else if (secondsPast <= 86400) {\n      result = `${Math.round(secondsPast / 3600)}h`;\n    } else {\n      const date = new Date(props.createdTime);\n      const day = date.getDate();\n      const month = date.toLocaleString('en-US', { month: 'short' });\n      const year = date.getFullYear() === new Date().getFullYear() ? '' : ` ${date.getFullYear()}`;\n      result = `${month} ${day}${year}`;\n    }\n\n    setDisplayDate(result);\n  }, [props.createdTime]);\n\n  return <span className={styles.date}>{displayDate}</span>;\n};\n"
+  },
+  {
+    "source": "client/src/components/Loading/Loading.module.css",
+    "content": ".container {\n  position: fixed;\n  top: 0;\n  left: 0;\n  z-index: 10;\n  width: 100vw;\n  height: 100vh;\n  background: #333a;\n}\n\n@keyframes load {\n  0% {\n    transform: translate(-50%, -50%) rotate(0deg);\n  }\n\n  100% {\n    transform: translate(-50%, -50%) rotate(360deg);\n  }\n}\n\n.loader {\n  position: absolute;\n  top: 50%;\n  left: 50%;\n  font-size: 10px;\n  text-indent: -9999em;\n  border-top: 1.1em solid rgb(255 255 255 / 20%);\n  border-right: 1.1em solid rgb(255 255 255 / 20%);\n  border-bottom: 1.1em solid rgb(255 255 255 / 20%);\n  border-left: 1.1em solid #fff;\n  animation: load 1.1s infinite linear;\n}\n\n.loader,\n.loader::after {\n  width: 10em;\n  height: 10em;\n  border-radius: 50%;\n}\n"
+  },
+  {
+    "source": "client/src/components/Loading/Loading.tsx",
+    "content": "import { Portal } from '../Portal';\nimport styles from './Loading.module.css';\n\nexport const Loading = (props: { visible: boolean }) => {\n  return props.visible ? (\n    <Portal>\n      <div className={styles.container}>\n        <div className={styles.loader} />\n      </div>\n    </Portal>\n  ) : null;\n};\n"
+  },
+  {
+    "source": "client/src/components/Modal/Modal.module.css",
+    "content": ".container {\n  position: fixed;\n  top: 0;\n  left: 0;\n  z-index: 10;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  width: 100%;\n  height: 100%;\n}\n\n.background {\n  position: absolute;\n  top: 0;\n  left: 0;\n  width: 100%;\n  height: 100%;\n  background: #333a;\n}\n\n.card {\n  position: relative;\n  display: flex;\n  flex-direction: column;\n  max-width: 90vw;\n  max-height: calc(100% - 80px);\n  overflow: hidden;\n  background: white;\n  border-radius: 8px;\n}\n\n.header {\n  padding: 16px 16px 12px;\n  font-weight: bold;\n  border-bottom: 1px solid #d8d8d8;\n}\n\n.body {\n  flex: 1;\n  padding: 24px;\n  overflow: auto;\n}\n"
+  },
+  {
+    "source": "client/src/components/Modal/Modal.tsx",
+    "content": "import type { PropsWithChildren } from 'react';\nimport React from 'react';\nimport { Portal } from '../Portal';\nimport styles from './Modal.module.css';\n\nexport const ModalHeader = (props: { text: string }) => {\n  return <div className={styles.header}>{props.text}</div>;\n};\n\nexport const ModalBody = (props: { children: React.ReactNode }) => {\n  return <div className={styles.body}>{props.children}</div>;\n};\n\nexport const Modal = (props: PropsWithChildren<{ open: boolean; onClose?: () => void }>) => {\n  return (\n    <Portal>\n      {props.open && (\n        <div className={styles.container}>\n          <div className={styles.background} onClick={props.onClose} />\n          <div className={styles.card}>{props.children}</div>\n        </div>\n      )}\n    </Portal>\n  );\n};\n"
+  },
+  {
+    "source": "client/src/components/Portal.ts",
+    "content": "import type { ReactNode } from 'react';\nimport { useEffect, useState } from 'react';\nimport ReactDOM from 'react-dom';\n\nexport const Portal = ({ children }: { children: ReactNode }) => {\n  const [el, setEl] = useState<HTMLDivElement>();\n\n  useEffect(() => {\n    const el = document.createElement('div');\n    document.body.appendChild(el);\n    setEl(el);\n\n    return () => {\n      document.body.removeChild(el);\n    };\n  }, []);\n\n  return el ? ReactDOM.createPortal(children, el) : null;\n};\n"
+  },
+  {
+    "source": "client/src/components/SafeHydrate.tsx",
+    "content": "import type { ReactNode } from 'react';\n\nconst SafeHydrate = ({ children }: { children: ReactNode }) => <>{children}</>;\n\nexport default SafeHydrate;\n"
+  },
+  {
+    "source": "client/src/components/icons/HumanIcon.tsx",
+    "content": "export const HumanIcon = (props: { size: number; fill: string }) => {\n  return (\n    <svg\n      xmlns=\"http://www.w3.org/2000/svg\"\n      viewBox=\"0 0 24 24\"\n      width={props.size}\n      height={props.size}\n      fill={props.fill}\n    >\n      <path d=\"M12 0c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm7.753 18.305c-.261-.586-.789-.991-1.871-1.241-2.293-.529-4.428-.993-3.393-2.945 3.145-5.942.833-9.119-2.489-9.119-3.388 0-5.644 3.299-2.489 9.119 1.066 1.964-1.148 2.427-3.393 2.945-1.084.25-1.608.658-1.867 1.246-1.405-1.723-2.251-3.919-2.251-6.31 0-5.514 4.486-10 10-10s10 4.486 10 10c0 2.389-.845 4.583-2.247 6.305z\" />\n    </svg>\n  );\n};\n"
+  },
+  {
+    "source": "client/src/pages/@components/AuthLoader.tsx",
+    "content": "import { useAtom } from 'jotai';\nimport { useEffect } from 'react';\nimport { userAtom } from 'src/atoms/user';\nimport { apiClient } from 'src/utils/apiClient';\nimport { returnNull } from 'src/utils/returnNull';\nimport { supabase } from 'src/utils/supabase';\n\nexport const AuthLoader = () => {\n  const [user, setUser] = useAtom(userAtom);\n\n  useEffect(() => {\n    const {\n      data: { subscription },\n    } = supabase.auth.onAuthStateChange(async (_, session) => {\n      if (session === null && user?.id !== null) {\n        await apiClient.session.$delete().catch(returnNull);\n        setUser(null);\n      } else if (session !== null && user?.id !== session.user.id) {\n        await apiClient.session.$post({ body: { jwt: session?.access_token } }).catch(returnNull);\n        await apiClient.private.me.$post().catch(returnNull).then(setUser);\n      }\n    });\n\n    return subscription.unsubscribe;\n  }, [user?.id, setUser]);\n\n  return <></>;\n};\n"
+  },
+  {
+    "source": "client/src/pages/@components/BasicHeader/BasicHeader.module.css",
+    "content": ".container {\n  position: sticky;\n  top: 0;\n  height: 48px;\n  background: #fafafa;\n  border-bottom: 1px solid #eee;\n}\n\n.main {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  max-width: 960px;\n  height: 100%;\n  padding: 0 16px;\n  margin: 0 auto;\n}\n\n.title {\n  font-size: 18px;\n  font-weight: bold;\n  color: #0d0e59;\n}\n\n.userBtn {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n  padding: 8px 16px;\n  cursor: pointer;\n  border: 1px solid transparent;\n  border-radius: 8px;\n  transition: 0.2s;\n}\n\n.userBtn:hover {\n  background: white;\n  border-color: #eee;\n}\n\n.userIcon {\n  border-radius: 50%;\n}\n\n.userName {\n  font-size: 14px;\n  font-weight: bold;\n  color: #555;\n}\n\n.loginBtn {\n  display: flex;\n  gap: 8px;\n  align-items: center;\n  padding: 8px 12px;\n  font-size: 14px;\n  font-weight: bold;\n  color: white;\n  cursor: pointer;\n  background: #0d0e59;\n  border-radius: 4px;\n  transition: 0.2s background;\n}\n\n.loginBtn:hover {\n  background: #0d0e59cc;\n}\n\n@media screen and (max-width: 640px) {\n  .userName {\n    display: none;\n  }\n}\n"
+  },
+  {
+    "source": "client/src/pages/@components/BasicHeader/BasicHeader.tsx",
+    "content": "import type { UserModel } from '$/api/@types/models';\nimport { Auth } from '@supabase/auth-ui-react';\nimport { ThemeSupa } from '@supabase/auth-ui-shared';\nimport { useState } from 'react';\nimport { Modal, ModalBody } from 'src/components/Modal/Modal';\nimport { APP_TITLE } from 'src/utils/constants';\nimport { supabase } from 'src/utils/supabase';\nimport styles from './BasicHeader.module.css';\n\nexport const BasicHeader = (props: { user: UserModel | null }) => {\n  const [opened, setOpened] = useState(false);\n  const onLogout = async () => {\n    setOpened(false);\n    if (confirm('Logout?')) await supabase.auth.signOut();\n  };\n\n  return (\n    <div className={styles.container}>\n      <div className={styles.main}>\n        <div className={styles.title}>{APP_TITLE}</div>\n        {props.user === null ? (\n          <div onClick={() => setOpened(true)}>\n            <div className={styles.loginBtn}>\n              <span>Login with Email</span>\n            </div>\n          </div>\n        ) : (\n          <div className={styles.userBtn} onClick={onLogout}>\n            <span className={styles.userName}>{props.user.name}</span>\n          </div>\n        )}\n      </div>\n      <Modal open={props.user === null && opened} onClose={() => setOpened(false)}>\n        <ModalBody>\n          <Auth\n            supabaseClient={supabase}\n            providers={[]}\n            appearance={{ theme: ThemeSupa }}\n            redirectTo={location.origin}\n          />\n        </ModalBody>\n      </Modal>\n    </div>\n  );\n};\n"
+  },
+  {
+    "source": "client/src/pages/@components/PrivateTask/PrivateTask.module.css",
+    "content": ".editGroup,\n.btnGroup {\n  display: flex;\n  gap: 8px;\n}\n\n.labelInput {\n  width: 400px;\n  padding: 2px;\n}\n\n.btn {\n  padding: 2px;\n}\n\n@media screen and (max-width: 640px) {\n  .labelInput {\n    width: 100%;\n  }\n}\n"
+  },
+  {
+    "source": "client/src/pages/@components/PrivateTask/PrivateTask.tsx",
+    "content": "import type { TaskModel } from '$/api/@types/models';\nimport { useState, type ChangeEvent } from 'react';\nimport { apiClient } from 'src/utils/apiClient';\nimport { returnNull } from 'src/utils/returnNull';\nimport styles from './PrivateTask.module.css';\n\nexport const PrivateTask = (props: { task: TaskModel; fetchTasks: () => Promise<void> }) => {\n  const { task } = props;\n  const [editingTaskId, setEditingTaskId] = useState<string>();\n  const [editingLabel, setEditingLabel] = useState('');\n  const isEditing = editingTaskId === task.id;\n\n  const editLabel = (e: ChangeEvent<HTMLInputElement>) => {\n    setEditingLabel(e.target.value);\n  };\n  const toggleDone = async () => {\n    await apiClient.private.tasks\n      .patch({ body: { taskId: task.id, done: !task.done, label: task.label } })\n      .catch(returnNull);\n    await props.fetchTasks();\n  };\n  const deleteTask = async () => {\n    await apiClient.private.tasks.delete({ body: { taskId: task.id } }).catch(returnNull);\n    await props.fetchTasks();\n  };\n  const updateTaskLabel = async () => {\n    await apiClient.private.tasks\n      .patch({ body: { taskId: task.id, done: task.done, label: editingLabel } })\n      .catch(returnNull);\n    setEditingTaskId(undefined);\n    setEditingLabel('');\n    await props.fetchTasks();\n  };\n  const startEditTask = () => {\n    setEditingTaskId(task.id);\n    setEditingLabel(task.label);\n  };\n\n  return (\n    <label>\n      <div className={styles.editGroup}>\n        <input type=\"checkbox\" checked={task.done} onChange={toggleDone} />\n        {isEditing ? (\n          <input\n            type=\"text\"\n            value={editingLabel}\n            className={styles.labelInput}\n            onChange={editLabel}\n          />\n        ) : (\n          <span>{task.label}</span>\n        )}\n      </div>\n      <div className={styles.btnGroup}>\n        <input type=\"button\" value=\"DELETE\" className={styles.btn} onClick={deleteTask} />\n        {isEditing ? (\n          <input type=\"button\" value=\"SAVE\" className={styles.btn} onClick={updateTaskLabel} />\n        ) : (\n          <input type=\"button\" value=\"EDIT\" className={styles.btn} onClick={startEditTask} />\n        )}\n      </div>\n    </label>\n  );\n};\n"
+  },
+  {
+    "source": "client/src/pages/@hooks/useLoading.tsx",
+    "content": "import { atom, useAtom } from 'jotai';\nimport { useCallback } from 'react';\nimport { Loading } from '../../components/Loading/Loading';\n\nconst countAtom = atom(0);\nconst loadingAtom = atom((get) => get(countAtom) > 0);\n\nexport const useLoading = () => {\n  const [count, setCount] = useAtom(countAtom);\n  const [loading] = useAtom(loadingAtom);\n  const addLoading = useCallback(() => setCount(count + 1), [count, setCount]);\n  const removeLoading = useCallback(() => setCount(count - 1), [count, setCount]);\n\n  return {\n    loadingElm: <Loading visible={loading} />,\n    addLoading,\n    removeLoading,\n  };\n};\n"
+  },
+  {
+    "source": "client/src/pages/_app.page.tsx",
+    "content": "import { Auth } from '@supabase/auth-ui-react';\nimport type { AppProps } from 'next/app';\nimport dynamic from 'next/dynamic';\nimport { useRouter } from 'next/router';\nimport { useEffect } from 'react';\nimport { gaPageview } from 'src/utils/gtag';\nimport { supabase } from 'src/utils/supabase';\nimport '../styles/globals.css';\nimport { AuthLoader } from './@components/AuthLoader';\n\nfunction MyApp({ Component, pageProps }: AppProps) {\n  const SafeHydrate = dynamic(() => import('../components/SafeHydrate'), { ssr: false });\n  const router = useRouter();\n\n  useEffect(() => {\n    const handleRouteChange = (url: string, { shallow }: { shallow: boolean }) => {\n      if (!shallow) gaPageview(url);\n    };\n\n    router.events.on('routeChangeComplete', handleRouteChange);\n    return () => {\n      router.events.off('routeChangeComplete', handleRouteChange);\n    };\n  }, [router.events]);\n\n  return (\n    <>\n      <SafeHydrate>\n        <Component {...pageProps} />\n      </SafeHydrate>\n      <Auth.UserContextProvider supabaseClient={supabase}>\n        <AuthLoader />\n      </Auth.UserContextProvider>\n    </>\n  );\n}\n\nexport default MyApp;\n"
+  },
+  {
+    "source": "client/src/pages/_document.page.tsx",
+    "content": "import { Head, Html, Main, NextScript } from 'next/document';\nimport { staticPath } from 'src/utils/$path';\nimport { APP_TITLE } from 'src/utils/constants';\nimport { GA_ID } from 'src/utils/gtag';\n\nfunction Document() {\n  return (\n    <Html lang=\"ja\">\n      <Head>\n        <title>{APP_TITLE}</title>\n        <meta name=\"robots\" content=\"noindex,nofollow\" />\n        <meta name=\"description\" content={APP_TITLE} />\n        <link rel=\"icon\" href={staticPath.favicon_png} />\n        <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} />\n        <script\n          dangerouslySetInnerHTML={{\n            __html: `\n                window.dataLayer = window.dataLayer || [];\n                function gtag(){dataLayer.push(arguments);}\n                gtag('js', new Date());\n                gtag('config', '${GA_ID}', {\n                  page_path: window.location.pathname,\n                });\n              `,\n          }}\n        />\n      </Head>\n      <body>\n        <Main />\n        <NextScript />\n      </body>\n    </Html>\n  );\n}\n\nexport default Document;\n"
+  }
+]
