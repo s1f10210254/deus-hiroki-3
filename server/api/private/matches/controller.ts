@@ -1,7 +1,6 @@
 import type { HandChoice, MatchCreateRequest, MatchResult, MatchUpdateRequest } from '$/api/@types';
 import { prismaClient } from '$/service/prismaClient';
 import { defineController } from './$relay';
-import type { Match } from '@prisma/client';
 
 const determineResult = (playerOneChoice: HandChoice, playerTwoChoice: HandChoice): MatchResult => {
   const winningCombinations: { [key in HandChoice]: HandChoice } = {
