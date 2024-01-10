@@ -1,4 +1,4 @@
-import type { MatchCreateRequest, MatchResult, MatchUpdateRequest, Match } from '$/api/@types';
+import type { MatchCreateRequest, MatchResult, MatchUpdateRequest, HandChoice } from '$/api/@types';
 import { prismaClient } from '$/service/prismaClient';
 import { defineController } from './$relay';
 
@@ -40,7 +40,10 @@ export default defineController(() => ({
       return { status: 400, body: 'Match not found or already concluded' };
     }
 
-    const result = determineResult(existingMatch.playerOneChoice as HandChoice, matchUpdate.playerTwoChoice);
+    const result = determineResult(
+      existingMatch.playerOneChoice as HandChoice,
+      matchUpdate.playerTwoChoice
+    );
 
     const updatedMatch = await prismaClient.match.update({
       where: { id: matchId },
