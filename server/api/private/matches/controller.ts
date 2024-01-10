@@ -1,4 +1,4 @@
-import type { MatchCreateRequest, MatchResult, MatchUpdateRequest, HandChoice } from '$/api/@types';
+import type { HandChoice, MatchCreateRequest, MatchResult, MatchUpdateRequest } from '$/api/@types';
 import { prismaClient } from '$/service/prismaClient';
 import { defineController } from './$relay';
 
