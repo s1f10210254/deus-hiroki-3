@@ -1,0 +1,267 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Rock-Paper-Scissors Game API",
+    "version": "1.0.0",
+    "description": "API for a rock-paper-scissors game service."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000"
+    }
+  ],
+  "paths": {
+    "/api/public/users/{userId}": {
+      "get": {
+        "summary": "Get user profile",
+        "operationId": "getUserProfile",
+        "tags": [
+          "User"
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "description": "The ID of the user to retrieve",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User profile retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      }
+    },
+    "/api/private/matches": {
+      "post": {
+        "summary": "Create a new match",
+        "operationId": "createMatch",
+        "tags": [
+          "Match"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MatchCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Match created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Match"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          }
+        }
+      }
+    },
+    "/api/private/matches/{matchId}": {
+      "put": {
+        "summary": "Update a match",
+        "operationId": "updateMatch",
+        "tags": [
+          "Match"
+        ],
+        "parameters": [
+          {
+            "name": "matchId",
+            "in": "path",
+            "required": true,
+            "description": "The ID of the match to update",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MatchUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Match updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Match"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "404": {
+            "description": "Match not found"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "gamesPlayed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "gamesWon": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "gamesLost": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "gamesTied": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "gamesPlayed",
+          "gamesWon",
+          "gamesLost",
+          "gamesTied"
+        ]
+      },
+      "Match": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "playerOneId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "playerTwoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "playerOneChoice": {
+            "$ref": "#/components/schemas/HandChoice"
+          },
+          "playerTwoChoice": {
+            "$ref": "#/components/schemas/HandChoice"
+          },
+          "result": {
+            "$ref": "#/components/schemas/MatchResult"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "playerOneId",
+          "playerTwoId",
+          "playerOneChoice",
+          "playerTwoChoice",
+          "result"
+        ]
+      },
+      "MatchCreateRequest": {
+        "type": "object",
+        "properties": {
+          "playerOneId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "playerTwoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "playerOneChoice": {
+            "$ref": "#/components/schemas/HandChoice"
+          }
+        },
+        "required": [
+          "playerOneId",
+          "playerTwoId",
+          "playerOneChoice"
+        ]
+      },
+      "MatchUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "playerTwoChoice": {
+            "$ref": "#/components/schemas/HandChoice"
+          }
+        },
+        "required": [
+          "playerTwoChoice"
+        ]
+      },
+      "HandChoice": {
+        "type": "string",
+        "enum": [
+          "ROCK",
+          "PAPER",
+          "SCISSORS"
+        ]
+      },
+      "MatchResult": {
+        "type": "string",
+        "enum": [
+          "PLAYER_ONE_WON",
+          "PLAYER_TWO_WON",
+          "TIE",
+          "PENDING"
+        ]
+      }
+    }
+  }
+}
