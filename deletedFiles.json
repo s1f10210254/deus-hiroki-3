@@ -1,0 +1,94 @@
+[
+  {
+    "source": "server/api/@types/models.ts",
+    "content": "export type UserModel = {\n  id: string;\n  email: string;\n  name: string;\n  createdTime: number;\n};\n\nexport type TaskModel = {\n  id: string;\n  label: string;\n  done: boolean;\n  createdTime: number;\n  image: { url: string; s3Key: string } | undefined;\n  author: { userId: string; name: string };\n};\n"
+  },
+  {
+    "source": "server/api/controller.ts",
+    "content": "import { defineController } from './$relay';\n\nexport default defineController(() => ({\n  get: () => ({ status: 200, body: '' }),\n}));\n"
+  },
+  {
+    "source": "server/api/health/controller.ts",
+    "content": "import { prismaClient } from '$/service/prismaClient';\nimport { defineController } from './$relay';\n\nexport default defineController(() => ({\n  get: async () => ({\n    status: 200,\n    body: {\n      server: 'ok',\n      db: await prismaClient.$queryRaw`SELECT CURRENT_TIMESTAMP;`.then(() => 'ok' as const),\n    },\n  }),\n}));\n"
+  },
+  {
+    "source": "server/api/health/index.ts",
+    "content": "import type { DefineMethods } from 'aspida';\n\nexport type Methods = DefineMethods<{\n  get: {\n    resBody: Record<'server' | 'db', 'ok'>;\n  };\n}>;\n"
+  },
+  {
+    "source": "server/api/index.ts",
+    "content": "import type { DefineMethods } from 'aspida';\n\nexport type Methods = DefineMethods<{\n  get: {\n    resBody: string;\n  };\n}>;\n"
+  },
+  {
+    "source": "server/api/private/controller.ts",
+    "content": "import { defineController } from './$relay';\n\nexport default defineController(() => ({\n  get: () => ({ status: 200, body: 'Hello' }),\n}));\n"
+  },
+  {
+    "source": "server/api/private/hooks.ts",
+    "content": "import type { JwtUser } from '$/domain/model/userModel';\nimport { userRepo } from '$/domain/repository/userRepo';\nimport type { JWT_PROP_NAME } from '$/service/constants';\nimport { prismaClient } from '$/service/prismaClient';\nimport assert from 'assert';\nimport type { UserModel } from '../@types/models';\nimport { defineHooks } from './$relay';\n\nexport type AdditionalRequest = {\n  [Key in typeof JWT_PROP_NAME]: JwtUser;\n} & { user: UserModel };\n\nexport default defineHooks(() => ({\n  onRequest: async (req, res) => {\n    try {\n      await req.jwtVerify({ onlyCookie: true });\n    } catch (e) {\n      res.status(401).send();\n      return;\n    }\n  },\n  preHandler: async (req, res) => {\n    assert(req.jwtUser);\n\n    const user = await userRepo.findById(prismaClient, req.jwtUser.sub);\n\n    if (user === null) {\n      res.status(401).send();\n      return;\n    }\n\n    req.user = user;\n  },\n}));\n"
+  },
+  {
+    "source": "server/api/private/index.ts",
+    "content": "import type { DefineMethods } from 'aspida';\n\nexport type Methods = DefineMethods<{\n  get: {\n    resBody: string;\n  };\n}>;\n"
+  },
+  {
+    "source": "server/api/private/me/controller.ts",
+    "content": "import { userUseCase } from '$/domain/useCase/userUseCase';\nimport assert from 'assert';\nimport { defineController } from './$relay';\n\nexport default defineController(() => ({\n  post: {\n    hooks: {\n      preValidation: async (req) => {\n        assert(req.jwtUser);\n\n        await userUseCase.findOrCreate(req.jwtUser);\n      },\n    },\n    handler: ({ user }) => ({ status: 200, body: user }),\n  },\n}));\n"
+  },
+  {
+    "source": "server/api/private/me/index.ts",
+    "content": "import type { UserModel } from '$/api/@types/models';\nimport type { DefineMethods } from 'aspida';\n\nexport type Methods = DefineMethods<{\n  post: {\n    resBody: UserModel;\n  };\n}>;\n"
+  },
+  {
+    "source": "server/api/private/tasks/controller.ts",
+    "content": "import { taskUseCase } from '$/domain/useCase/taskUseCase';\nimport { z } from 'zod';\nimport { defineController, multipartFileValidator } from './$relay';\n\nexport default defineController(() => ({\n  post: {\n    validators: {\n      body: z.object({ label: z.string(), image: multipartFileValidator().optional() }),\n    },\n    handler: async ({ user, body }) => ({\n      status: 201,\n      body: await taskUseCase.create(user, body.label, body.image),\n    }),\n  },\n  patch: {\n    validators: {\n      body: z.object({\n        taskId: z.string(),\n        done: z.boolean(),\n        label: z.string(),\n      }),\n    },\n    handler: async ({ user, body }) => {\n      const task = await taskUseCase.update(user, body.taskId, body.done, body.label);\n\n      return { status: 204, body: task };\n    },\n  },\n  delete: async ({ user, body }) => {\n    await taskUseCase.delete(user, body.taskId);\n\n    return { status: 204 };\n  },\n}));\n"
+  },
+  {
+    "source": "server/api/private/tasks/index.ts",
+    "content": "import type { TaskModel } from '$/api/@types/models';\nimport type { DefineMethods } from 'aspida';\n\nexport type Methods = DefineMethods<{\n  post: {\n    reqFormat: FormData;\n    reqBody: {\n      label: string;\n      image?: Blob;\n    };\n    resBody: TaskModel;\n  };\n\n  patch: {\n    reqBody: {\n      taskId: string;\n      done: boolean;\n      label: string;\n    };\n    status: 204;\n    resBody: TaskModel;\n  };\n\n  delete: {\n    reqBody: {\n      taskId: string;\n    };\n    status: 204;\n  };\n}>;\n"
+  },
+  {
+    "source": "server/api/public/controller.ts",
+    "content": "import { defineController } from './$relay';\n\nexport default defineController(() => ({\n  get: () => ({ status: 200, body: 'Hello' }),\n}));\n"
+  },
+  {
+    "source": "server/api/public/index.ts",
+    "content": "import type { DefineMethods } from 'aspida';\n\nexport type Methods = DefineMethods<{\n  get: {\n    resBody: string;\n  };\n}>;\n"
+  },
+  {
+    "source": "server/api/public/tasks/controller.ts",
+    "content": "import { taskRepo } from '$/domain/repository/taskRepo';\nimport { prismaClient } from '$/service/prismaClient';\nimport { defineController } from './$relay';\n\nexport default defineController(() => ({\n  get: async ({ query }) => ({\n    status: 200,\n    body: await taskRepo.findAll(prismaClient, query?.limit),\n  }),\n}));\n"
+  },
+  {
+    "source": "server/api/public/tasks/index.ts",
+    "content": "import type { TaskModel } from '$/api/@types/models';\nimport type { DefineMethods } from 'aspida';\n\nexport type Methods = DefineMethods<{\n  get: {\n    query?: {\n      limit?: number;\n    };\n    resBody: TaskModel[];\n  };\n}>;\n"
+  },
+  {
+    "source": "server/api/session/controller.ts",
+    "content": "import { COOKIE_NAME } from '$/service/constants';\nimport type { CookieSerializeOptions } from '@fastify/cookie';\nimport type { Methods } from '.';\nimport { defineController } from './$relay';\n\nexport type AdditionalRequest = {\n  body: Methods['post']['reqBody'];\n};\n\nconst options: CookieSerializeOptions = {\n  httpOnly: true,\n  secure: true,\n  path: '/',\n  sameSite: 'none',\n};\n\nexport default defineController(() => ({\n  post: {\n    hooks: {\n      preHandler: (req, reply, done) => {\n        const expiresIn = 60 * 60 * 24 * 5 * 1000;\n\n        reply.setCookie(COOKIE_NAME, req.body?.jwt ?? '', {\n          ...options,\n          expires: new Date(Date.now() + expiresIn),\n        });\n\n        done();\n      },\n    },\n    handler: () => {\n      return { status: 200, body: { status: 'success' } };\n    },\n  },\n  delete: {\n    hooks: {\n      preHandler: (_, reply, done) => {\n        reply.clearCookie(COOKIE_NAME, options);\n        done();\n      },\n    },\n    handler: () => {\n      return { status: 200, body: { status: 'success' } };\n    },\n  },\n}));\n"
+  },
+  {
+    "source": "server/api/session/index.ts",
+    "content": "import type { DefineMethods } from 'aspida';\n\nexport type Methods = DefineMethods<{\n  post: {\n    reqBody: { jwt: string };\n    resBody: { status: 'success' };\n  };\n  delete: {\n    resBody: { status: 'success' };\n  };\n}>;\n"
+  },
+  {
+    "source": "server/api/private/tasks/controller.ts",
+    "content": "import { taskUseCase } from '$/domain/useCase/taskUseCase';\nimport { z } from 'zod';\nimport { defineController, multipartFileValidator } from './$relay';\n\nexport default defineController(() => ({\n  post: {\n    validators: {\n      body: z.object({ label: z.string(), image: multipartFileValidator().optional() }),\n    },\n    handler: async ({ user, body }) => ({\n      status: 201,\n      body: await taskUseCase.create(user, body.label, body.image),\n    }),\n  },\n  patch: {\n    validators: {\n      body: z.object({\n        taskId: z.string(),\n        done: z.boolean(),\n        label: z.string(),\n      }),\n    },\n    handler: async ({ user, body }) => {\n      const task = await taskUseCase.update(user, body.taskId, body.done, body.label);\n\n      return { status: 204, body: task };\n    },\n  },\n  delete: async ({ user, body }) => {\n    await taskUseCase.delete(user, body.taskId);\n\n    return { status: 204 };\n  },\n}));\n"
+  },
+  {
+    "source": "server/api/public/tasks/controller.ts",
+    "content": "import { taskRepo } from '$/domain/repository/taskRepo';\nimport { prismaClient } from '$/service/prismaClient';\nimport { defineController } from './$relay';\n\nexport default defineController(() => ({\n  get: async ({ query }) => ({\n    status: 200,\n    body: await taskRepo.findAll(prismaClient, query?.limit),\n  }),\n}));\n"
+  },
+  {
+    "source": "server/domain/model/taskModel.ts",
+    "content": "import type { TaskModel, UserModel } from '$/api/@types/models';\nimport { S3_PREFIX } from '$/domain/repository/s3Repo';\nimport type { MultipartFile } from '@fastify/multipart';\nimport { randomUUID } from 'crypto';\n\nconst dataToUrl = (data: MultipartFile) => {\n  const s3Key = `tasks/images/${randomUUID()}.${data.filename.split('.').at(-1)}`;\n\n  return { url: `${S3_PREFIX}${s3Key}`, s3Key };\n};\n\nexport type DeletableTaskId = { type: 'DeletableTask'; val: string };\n\nexport const taskModel = {\n  create: (user: UserModel, label: string, data: MultipartFile | undefined): TaskModel => ({\n    id: randomUUID(),\n    done: false,\n    label,\n    image: data === undefined ? undefined : dataToUrl(data),\n    createdTime: Date.now(),\n    author: { userId: user.id, name: user.name },\n  }),\n  deleteOrThrow: (user: UserModel, task: TaskModel): DeletableTaskId => {\n    if (user.id !== task.author.userId) throw new Error('cannot delete');\n\n    return { type: 'DeletableTask', val: task.id };\n  },\n  updateOrThrow: (\n    user: UserModel,\n    task: TaskModel,\n    updateData: { done: boolean; label: string }\n  ): TaskModel => {\n    if (user.id !== task.author.userId) throw new Error('cannot update task');\n\n    return { ...task, ...updateData };\n  },\n};\n"
+  },
+  {
+    "source": "server/domain/repository/taskRepo.ts",
+    "content": "import type { TaskModel } from '$/api/@types/models';\nimport type { DeletableTaskId } from '$/domain/model/taskModel';\nimport type { Prisma, Task, User } from '@prisma/client';\nimport { S3_PREFIX } from './s3Repo';\n\nconst toModel = (task: Task & { User: User }): TaskModel => ({\n  id: task.id,\n  label: task.label,\n  done: task.done,\n  createdTime: task.createdAt.getTime(),\n  image:\n    task.imageKey === null\n      ? undefined\n      : { url: `${S3_PREFIX}${task.imageKey}`, s3Key: task.imageKey },\n  author: { userId: task.userId, name: task.User.name },\n});\n\nexport const taskRepo = {\n  save: async (tx: Prisma.TransactionClient, task: TaskModel) => {\n    await tx.task.upsert({\n      where: { id: task.id },\n      update: { done: task.done, label: task.label, imageKey: task.image?.s3Key },\n      create: {\n        id: task.id,\n        userId: task.author.userId,\n        done: task.done,\n        label: task.label,\n        imageKey: task.image?.s3Key,\n        createdAt: new Date(task.createdTime),\n      },\n    });\n  },\n  delete: async (tx: Prisma.TransactionClient, deletableTaskId: DeletableTaskId) => {\n    await tx.task.delete({ where: { id: deletableTaskId.val } });\n  },\n  findAll: (tx: Prisma.TransactionClient, limit?: number): Promise<TaskModel[]> =>\n    tx.task\n      .findMany({ take: limit, include: { User: true }, orderBy: { createdAt: 'desc' } })\n      .then((tasks) => tasks.map(toModel)),\n  findByIdOrThrow: (tx: Prisma.TransactionClient, taskId: string): Promise<TaskModel> =>\n    tx.task.findUniqueOrThrow({ where: { id: taskId }, include: { User: true } }).then(toModel),\n};\n"
+  },
+  {
+    "source": "server/domain/useCase/taskUseCase.ts",
+    "content": "import type { TaskModel, UserModel } from '$/api/@types/models';\nimport { taskModel } from '$/domain/model/taskModel';\nimport { s3Repo } from '$/domain/repository/s3Repo';\nimport { taskRepo } from '$/domain/repository/taskRepo';\nimport { transaction } from '$/service/prismaClient';\nimport type { MultipartFile } from '@fastify/multipart';\n\nexport const taskUseCase = {\n  create: (user: UserModel, label: string, image: MultipartFile | undefined) =>\n    transaction<TaskModel>('RepeatableRead', async (tx) => {\n      const task = taskModel.create(user, label, image);\n\n      if (image !== undefined && task.image !== undefined) {\n        await s3Repo.save(task.image.s3Key, image);\n      }\n\n      await taskRepo.save(tx, task);\n\n      return task;\n    }),\n  delete: (user: UserModel, taskId: string) =>\n    transaction('RepeatableRead', async (tx) => {\n      const task = await taskRepo.findByIdOrThrow(tx, taskId);\n      const deletableTaskId = taskModel.deleteOrThrow(user, task);\n\n      await taskRepo.delete(tx, deletableTaskId);\n    }),\n  update: (user: UserModel, taskId: string, done: boolean, label: string) =>\n    transaction<TaskModel>('RepeatableRead', async (tx) => {\n      const task = await taskRepo.findByIdOrThrow(tx, taskId);\n      const newTask = taskModel.updateOrThrow(user, task, { done, label });\n\n      await taskRepo.save(tx, newTask);\n\n      return newTask;\n    }),\n};\n"
+  }
+]
