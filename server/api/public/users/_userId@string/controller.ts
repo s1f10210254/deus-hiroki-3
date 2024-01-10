@@ -1,5 +1,5 @@
-import { defineController } from './$relay';
 import { prismaClient } from '$/service/prismaClient';
+import { defineController } from './$relay';
 
 export default defineController(() => ({
   get: async ({ params }) => {
@@ -11,32 +11,32 @@ export default defineController(() => ({
 
     const gamesPlayed = await prismaClient.match.count({
       where: {
-        OR: [{ playerOneId: userId }, { playerTwoId: userId }]
-      }
+        OR: [{ playerOneId: userId }, { playerTwoId: userId }],
+      },
     });
     const gamesWon = await prismaClient.match.count({
       where: {
         OR: [
           { playerOneId: userId, result: 'PLAYER_ONE_WON' },
-          { playerTwoId: userId, result: 'PLAYER_TWO_WON' }
-        ]
-      }
+          { playerTwoId: userId, result: 'PLAYER_TWO_WON' },
+        ],
+      },
     });
     const gamesLost = await prismaClient.match.count({
       where: {
         OR: [
           { playerOneId: userId, result: 'PLAYER_TWO_WON' },
-          { playerTwoId: userId, result: 'PLAYER_ONE_WON' }
-        ]
-      }
+          { playerTwoId: userId, result: 'PLAYER_ONE_WON' },
+        ],
+      },
     });
     const gamesTied = await prismaClient.match.count({
       where: {
         OR: [
           { playerOneId: userId, result: 'TIE' },
-          { playerTwoId: userId, result: 'TIE' }
-        ]
-      }
+          { playerTwoId: userId, result: 'TIE' },
+        ],
+      },
     });
 
     const userProfile = {
@@ -46,9 +46,9 @@ export default defineController(() => ({
       gamesPlayed,
       gamesWon,
       gamesLost,
-      gamesTied
+      gamesTied,
     };
 
     return { status: 200, body: userProfile };
-  }
+  },
 }));

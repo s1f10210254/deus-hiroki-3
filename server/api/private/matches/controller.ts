@@ -1,12 +1,12 @@
-import { defineController } from './$relay';
+import type { MatchCreateRequest, MatchResult, MatchUpdateRequest, Match } from '$/api/@types';
 import { prismaClient } from '$/service/prismaClient';
-import { Match, MatchCreateRequest, MatchUpdateRequest, MatchResult } from '$/api/@types';
+import { defineController } from './$relay';
 
-const determineResult = (playerOneChoice: string, playerTwoChoice: string): MatchResult => {
-  const winningCombinations = {
+const determineResult = (playerOneChoice: HandChoice, playerTwoChoice: HandChoice): MatchResult => {
+  const winningCombinations: { [key in HandChoice]: HandChoice } = {
     ROCK: 'SCISSORS',
     PAPER: 'ROCK',
-    SCISSORS: 'PAPER'
+    SCISSORS: 'PAPER',
   };
 
   if (playerOneChoice === playerTwoChoice) return 'TIE';
@@ -17,7 +17,7 @@ const determineResult = (playerOneChoice: string, playerTwoChoice: string): Matc
 export default defineController(() => ({
   post: async ({ body }) => {
     const match: MatchCreateRequest = body;
-    const result = 'PENDING';
+    const result: MatchResult = 'PENDING';
 
     const createdMatch = await prismaClient.match.create({
       data: {
@@ -25,8 +25,8 @@ export default defineController(() => ({
         playerTwoId: match.playerTwoId,
         playerOneChoice: match.playerOneChoice,
         playerTwoChoice: null,
-        result
-      }
+        result,
+      },
     });
 
     return { status: 201, body: createdMatch };
@@ -40,13 +40,13 @@ export default defineController(() => ({
       return { status: 400, body: 'Match not found or already concluded' };
     }
 
-    const result = determineResult(existingMatch.playerOneChoice, matchUpdate.playerTwoChoice);
+    const result = determineResult(existingMatch.playerOneChoice as HandChoice, matchUpdate.playerTwoChoice);
 
     const updatedMatch = await prismaClient.match.update({
       where: { id: matchId },
-      data: { playerTwoChoice: matchUpdate.playerTwoChoice, result }
+      data: { playerTwoChoice: matchUpdate.playerTwoChoice, result },
     });
 
     return { status: 200, body: updatedMatch };
-  }
+  },
 }));

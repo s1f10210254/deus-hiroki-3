@@ -1,11 +1,14 @@
-import type { UserModel } from '$/api/@types/models';
+import type { User as UserModel } from '$/api/@types';
 import type { Prisma, User } from '@prisma/client';
 
 const toModel = (prismaUser: User): UserModel => ({
   id: prismaUser.id,
   email: prismaUser.email,
   name: prismaUser.name,
-  createdTime: prismaUser.createdAt.getTime(),
+  gamesPlayed: prismaUser.gamesPlayed,
+  gamesWon: prismaUser.gamesWon,
+  gamesLost: prismaUser.gamesLost,
+  gamesTied: prismaUser.gamesTied,
 });
 
 export const userRepo = {
@@ -17,7 +20,11 @@ export const userRepo = {
         id: user.id,
         email: user.email,
         name: user.name,
-        createdAt: new Date(user.createdTime),
+        gamesPlayed: user.gamesPlayed,
+        gamesWon: user.gamesWon,
+        gamesLost: user.gamesLost,
+        gamesTied: user.gamesTied,
+        createdAt: new Date(),
       },
     });
   },

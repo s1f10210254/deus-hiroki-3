@@ -1,4 +1,4 @@
-import type { UserModel } from '$/api/@types/models';
+import type { User as UserModel } from '$/api/@types';
 import type { JwtUser } from '$/domain/model/userModel';
 import { userModel } from '$/domain/model/userModel';
 import { userRepo } from '$/domain/repository/userRepo';
