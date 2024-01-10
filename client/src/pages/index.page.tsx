@@ -15,8 +15,8 @@ const Home = () => {
       body: {
         playerOneId: userId,
         playerTwoId: opponentId,
-        playerOneChoice: userHand
-      }
+        playerOneChoice: userHand,
+      },
     });
 
     setMatchId(match.id);
@@ -44,7 +44,10 @@ const Home = () => {
       <div>
         <label>
           Your Hand:
-          <select value={userHand} onChange={(e) => setUserHand(e.target.value as 'ROCK' | 'PAPER' | 'SCISSORS')}>
+          <select
+            value={userHand}
+            onChange={(e) => setUserHand(e.target.value as 'ROCK' | 'PAPER' | 'SCISSORS')}
+          >
             <option value="ROCK">Rock</option>
             <option value="PAPER">Paper</option>
             <option value="SCISSORS">Scissors</option>
