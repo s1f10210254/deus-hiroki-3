@@ -5,10 +5,10 @@ node_modules/
 .DS_Store
 *.pem
 tsconfig.tsbuildinfo
-.env
 
 # debug
 npm-debug.log*
 
 # docker
 /docker/dev/minio/
+package-lock.json
